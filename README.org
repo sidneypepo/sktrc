@@ -1,0 +1,298 @@
+#+title: README
+#+author: Sidney PEPO
+
+* Simple Kernel Trace
+Simple Kernel Trace, or simply SKTRC, is a (Linux) Kernel module designed to help developers to trace targeted data at Kernel level, from single functions to entire modules.
+
+* Usage
+This should be pretty straight forward, but pay attention to the steps, as wrong procedures may cause your Kernel to fail at building or even build, but randomly crash.
+
+This way, first is HIGHLY RECOMMENDED to follow the [[#Testing-SKTRC][Testing SKTRC]] steps to avoid any future unknown issues. If you've followed and everything went fine (or you didn't, but you REALLY, *REALLY* know what you are doing), you can jump to the [[#Actually-using-SKTRC][Actually using SKTRC]].
+
+** Testing SKTRC
+Before anything, check if your Kernel supports external module loading. To do this, follow one of the methods [[https://wiki.gentoo.org/wiki/Kernel/Upgrade#Copy_the_previous_kernel_configuration][described in this guide]], but to read your Kernel config instead of copying it: you're looking for if ~CONFIG_MODULES~ is set to ~y~. If it's not, you should rebuild your Kernel to enable this config!
+
+Once you're sure that ~CONFIG_MODULES~ is enabled, then you can continue this reading.
+
+1. Create a makefile called ~Makefile~ at this repo's path with the following content:
+
+  #+begin_src makefile
+SKTRC := /FULL/PATH/TO/SKTRC/src
+TREE := /FULL/PATH/TO/KERNEL_TREE
+OUT := /FULL/PATH/TO/BUILD_DIR
+#ARCH := arm64 # Uncomment this if you are building for an arch different from CPU arch
+#CROSS_COMPILE := /FULL/PATH/TO/aarch64-linux-android- # Uncomment this to select a cross-compiler compatible with ARCH
+
+.PHONY: all clean
+
+all: 
+	$(MAKE) -C $(TREE) O=$(OUT) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) M=$(SKTRC) modules
+
+clean: 
+	$(MAKE) -C $(TREE) O=$(OUT) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) M=$(SKTRC) clean
+  #+end_src
+
+  Don't forget to change ~/FULL/PATH/TO/...~ at the first 3 lines to the actual full paths to (1) the ~src~ directory from this repo, (2) your Kernel source tree and (3) the build output directory, respectivly.
+
+  Also, if you're not building for a native architecture (i.e., the arch of your device where you doing builds), uncomment the ~ARCH~ and ~CROSS_COMPILE~ variables and set them with (1) the desired architecture and (2) the full path to your cross-compiler (and *do NOT forget the cross-compiler prefix at the end of the path WITH the ~-~ at the end!*)
+
+2. Open the ~src/sktrc.c~, go to the the ~SKTRC_LOG~ pointer and edit the ~/FULL/PATH/TO/sktrc.log~ to the full path where you'd like to store your SKTRC log. This path should exist, otherwise, you wont be able to verify if SKTRC is properly working!
+
+3. Copy the ~src/sktrc.h~ and ~src/sktrcn.h~ headers to the ~include/trace~ directory inside your Kernel source tree.
+
+4. Enter at this repo's path and do a test build. To do this, just enter ~make~ and wait.
+
+5. If the test build was built, run
+
+   #+begin_src sh
+insmod PATH/TO/sktrc.ko
+
+insmod PATH/TO/sktrc_flush.ko
+
+rmmod sktrc_flush
+
+rmmod sktrc
+   #+end_src
+
+   changing ~PATH/TO/~ to the actual path where the modules are located.
+
+   #+begin_quote
+   Note: these commands should be ran by a privileged user.
+
+   Note 2: the listed commands will ONLY work if their previous ones goes with no errors!
+   #+end_quote
+
+   Now run
+
+   #+begin_src sh
+dmesg | grep sktrc
+
+cat PATH/TO/sktrc.log
+   #+end_src
+
+   changing ~PATH/TO/~ to the actual path choosen for the SKTRC log. If the output from both commands are similar to this:
+
+   #+begin_src txt
+[+] [sktrc:sktrc_init]: SKTRC loaded!
+[+] [sktrc:sktrc_flush]: SKTRC flushed!
+[+] [sktrc:sktrc_exit]: SKTRC unloaded!
+   #+end_src
+
+   this means that everything is working fine and you can continue to the [[#Actually-using-SKTRC][Actually using SKTRC]]!
+
+** Actually using SKTRC
+One important SKTRC feature is that it's "module-agnostic", which means that it should work with most Kernel modules, but you should pay attention to the usage details described below.
+
+Also, if that's your first time using SKTRC, it's recommended to apply it for only one or two functions from a module, just to see if your Kernel builds and boots up. Only after that you should add SKTRC to other modules and functions.
+
+1. If you didn't followed the steps from [[#Testing-SKTRC][Testing SKTRC]], copy the ~src/sktrc.h~ and ~src/sktrcn.h~ headers to the ~include/trace~ directory inside your Kernel source tree.
+
+2. Copy the ~src/sktrc.c~ to the ~kernel/trace~ directory inside your Kernel source tree.
+
+3. Open the ~kernel/trace/Kconfig~ inside your Kernel source tree and append the following content at the end of the file:
+
+   #+begin_src txt
+config SKTRC
+	bool "SKTRC - Simple Kernel Trace"
+	default y
+	help
+	  Check https://github.com/sidneypepo/sktrc.
+   #+end_src
+
+4. Open the ~kernel/trace/Makefile~ inside your Kernel source tree and append the following content at the end of the file:
+
+   #+begin_src makefile
+obj-$(CONFIG_SKTRC) += sktrc.o
+   #+end_src
+
+5. Choose the module(s) that you'd like to trace with SKTRC, open it (i.e., its ~.c~) and add ~#include <trace/sktrc.h>~ right at the beginning of the code.
+
+6. Open the ~kernel/trace/sktrc.c~ (not the ~src/sktrc.c~) and edit the ~SKTRC_CTX~ array to add your chosen module(s).
+
+   Pretending that your modules are called ~mod1~ and ~mod2~, the array should become something like this:
+
+   #+begin_src c
+static const char SKTRC_CTX[0x10][0x100][0x2a] = {
+	{			// 0x0000  XXXX
+		"sktrc",		// 0000
+		"sktrc_init",	// 0001
+		"sktrc_exit",	// 0002
+		"sktrc_flush"	// 0003
+	},
+	{			// 0x0001  XXXX
+		"mod1"			// 0000
+	},
+	{			// 0x0002  XXXX
+		"mod2"			// 0000
+	}
+	// Add a comma and curly braces here to add more modules, following the same structure shown above
+};
+   #+end_src
+
+   with *ONLY ONE module per array*.
+
+   #+begin_quote
+   Note: *DON'T TOUCH ANYTHING FROM THE FIRST ARRAY AND ITS STRINGS*, because they're reserved for SKTRC ONLY!
+   #+end_quote
+
+   As seen in the example above, each module should have a exclusive array. Thus, module's name should be the array's first string. That's part of the SKTRC's "contextful" design, so don't forget about this detail.
+
+   Also note that every module will have a unique numeric ID dictated by the position *of the array* (SKTRC is 0, ~mod1~ is 1, ~mod2~ is 2, and so on). Their IDs will be needed in two steps.
+
+7. Choose the function(s) that you'd like to trace with SKTRC. Be careful, as some special functions cannot be traced by SKTRC due to design limitations (read the [[#Known-issues][Known issues]] section for such examples).
+
+8. Open again the ~kernel/trace/sktrc.c~ (not the ~src/sktrc.c~) and edit the ~SKTRC_CTX~ array to add your chosen functions(s).
+
+   Pretending that ~mod1~ functions will be the ~init~ and ~exit~ ones and ~mod2~ will only be the ~just_a_func~, the array should become something like this:
+
+   #+begin_src c
+static const char SKTRC_CTX[0x10][0x100][0x2a] = {
+	{			// 0x0000  XXXX
+		"sktrc",		// 0000
+		"sktrc_init",	// 0001
+		"sktrc_exit",	// 0002
+		"sktrc_flush"	// 0003
+	},
+	{			// 0x0001  XXXX
+		"mod1",			// 0000
+		"init",			// 0001
+		"exit"			// 0002
+	},
+	{			// 0x0002  XXXX
+		"mod2",			// 0000
+		"just_a_func"	// 0001
+		// Add a comma here to add more functions to this module, following the same structure shown above
+	}
+};
+   #+end_src
+
+   with *the functions right after module's name*.
+
+   #+begin_quote
+   Note: Again, *DON'T TOUCH ANYTHING FROM THE FIRST ARRAY AND ITS STRINGS*, because they're reserved for SKTRC ONLY!
+   #+end_quote
+
+   As in the module's step, every function will have a unique numeric ID dictated by it's position *in the array* (in ~mod1~, ~init~ will be 1, ~exit~ will be 2 and so on. in ~mod2~, ~just_a_func~ will be 1, and so on). This module + function IDs will be needed in the next step.
+
+9. Open again the modules code (i.e., its ~.c~) and add the ~sktrc~ function to the previously chosen functions at your desired code regions.
+
+   To do this, first we need to understand the ~sktrc~ function. It's defined as
+
+   #+begin_src c
+u_int8_t sktrc(const u_int32_t hash, const char *fmt, ...);
+   #+end_src
+
+   Its ~hash~ argument is the most important one: it should contain the IDs of the traced function and its module. It also receives flags and a sign for changing SKTRC's behavior, but we'll only cover this at the [[#Hash-structure][Hash structute]] section.
+
+   The remaining ~sktrc~ function arguments are a format string and its arguments (exactly like common C functions like ~printf~).
+
+   This way, we can now back to the modules code.
+
+   To simplify things, you should *always* use the ~SKTRC_HASH~ macro, which does the bitwise operations to build a sktrc hash. So, pretending that we're at ~mod1~, its ~init~ and ~exit~ function codes should be like this:
+
+   #+begin_src c
+#include <trace/sktrc.h>
+
+// Some code...
+
+static int  __init mod1_init(void)
+{
+	// Some code...
+
+	sktrc(SKTRC_HASH(0, 0, 1, 1), "Module 1 inited!");
+	return 0;
+}
+
+static void  __exit mod1_exit(void)
+{
+	// Some code...
+
+	sktrc(SKTRC_HASH(0, 0, 1, 2), "Module 1 exited!");
+	return;
+}
+   #+end_src
+
+   where the ~SKTRC_HASH~ parameters in the above example are: 0 (flag), 0 (sign), 1 (module ~mod1~), and 1 and 2 (~init~ and ~exit~ functions, respectively).
+
+   Now for the ~mod2~, we have this example:
+
+      #+begin_src c
+#include <trace/sktrc.h>
+
+// Some code...
+
+static void  __exit just_a_func(void)
+{
+	// Some code...
+
+	sktrc(SKTRC_HASH(0, 0, 2, 1), "I'm just a function");
+	return;
+}
+   #+end_src
+
+   where the ~SKTRC_HASH~ parameters in the above example are: 0 (flag), 0 (sign), 2 (module ~mod2~), and 1 (~just_a_func~ function). Easy, isn't it?
+
+10. If you want to disable a single ~sktrc~ call, you should append an ~n~ at it, like this: ~sktrcn~. If you want to fully disable SKTRC from a module, you should append an ~n~ in it's header inclusing , like this: ~#include <trace/sktrcn.h>~.
+
+11. Open the ~Kconfig~ files from your desired modules and add SKTRC as a depencency, like this:
+
+    #+begin_src txt
+config EXAMPLE_MODULE
+	bool "Example module"
+	default y
+	depends on SKTRC
+	help
+	  Just an example module
+    #+end_src
+
+    #+begin_quote
+    Note: if the module has more dependencies, don't forget to properly fix the boolean operators (~&&~, ~||~, ~!~)!
+    #+end_quote
+
+12. Save all the files. Enter at your Kernel path, enter ~make~ and wait.
+
+13. If the build finishes, boot your new Kernel.
+
+14. If the Kernel booted with no issues, run
+
+    #+begin_src sh
+insmod PATH/TO/sktrc_flush.ko
+
+rmmod sktrc_flush
+    #+end_src
+
+    in order to dump the SKTRC logs to the actual file. That's not always needed, but do it at least once (read the [[#Known-issues][Known issues]] section for more information).
+
+15. If everything is done, you can repeat the steps 5 to 12 to trace more modules and its functions.
+
+Now that you are able to use SKTRC, you should read the [[#Known-issues][Known issues]] and [[#Hash-structure][Hash structute]] sections for more useful information around SKTRC, it's features and limitations. For debugging/development/modding, check the [[#Debugging-developing-and-modding-SKTRC][Debugging, developing and modding SKTRC]] section.
+
+* Known issues
+This section is at TODO state, but here some issues that will be populated.
+
+** Memory outages
+TODO
+
+** Flushing to the log file
+TODO
+
+** Function name lenghts and module amount
+TODO
+
+* Hash structure
+The SKTRC hash has the following structure:
+
+   | ~flags~ | ~sign~ | ~mod_id~ | ~func_id~ |
+   | 2 bits  | 2 bits | 12 bits  | 16 bits   |
+
+   where
+   - ~flag~ is only (for now) 0 or 1 to enable or disable SKTRC file appending, respectively;
+
+   - ~sign~ can be a value from 0 to 3, which each one represents ~*~, ~+~, ~-~ and ~?~, respectively;
+
+   - ~mod_id~ is the module ID; and
+
+   - ~func_id~ is the traced function ID;
+
+* Debugging, developing and modding SKTRC
+This section is at TODO state, but the tl;dr is: it's a good pratice to first write and test your code at the ~src/sktrc_debug.c~, but you can also do it in the ~src/sktrc.c~ and ~src/sktrc_flush.c~ if you want to (just don't submit broken code).

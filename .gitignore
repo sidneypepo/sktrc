@@ -1,0 +1,6 @@
+/Makefile
+*.o*
+*.ko*
+*.mod*
+.tmp_versions
+Module.symvers
