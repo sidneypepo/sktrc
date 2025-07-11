@@ -1,0 +1,26 @@
+#+title: README
+#+author: Sidney PEPO
+
+* Simple Kernel Trace
+Simple Kernel Trace, or simply SKTRC, is a (Linux) Kernel module designed to help developers to trace targeted data at Kernel level, from single functions to entire modules.
+
+* Usage
+I need to sleep a bit, so this section will be as TODO until I wake up. If for some strange reason you find this repo in this meanwhile and you think that you can figure out by yourself how to use it, read what i've done [[https://github.com/sidneypepo/daisy_kernel/commit/2bfbcc4374fea0d35245c64c8fbd9d2ac3d8f1a9][in this commit]]. Said that, see you when I wake up 🥱🥱
+
+# #+begin_src makefile
+# OUT := PATH/TO/BUILD_DIR
+# TREE := PATH/TO/KERNEL_TREE
+# SKTRC := PATH/TO/SKTRC_REPO
+# # ARCH := arm64 # Uncomment this if you are building for an architecture that is not x86_64
+# # CROSS_COMPILE := PATH/TO/aarch64-linux-android- # Uncomment this if you are cross compiling the module
+
+# obj-m += sktrc.o
+# obj-m += sktrc_flush.o
+# obj-m += sktrc_debug.o
+
+# all: 
+# 	$(MAKE) -C $(TREE) O=$(OUT) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) M=$(SKTRC) modules
+
+# clean: 
+# 	$(MAKE) -C $(TREE) O=$(OUT) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) M=$(SKTRC) clean
+# #+end_src
