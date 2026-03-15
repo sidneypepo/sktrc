@@ -26,15 +26,15 @@ OUT := /FULL/PATH/TO/BUILD_DIR
 .PHONY: all clean
 
 all: 
-	$(MAKE) -C $(TREE) O=$(OUT) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) M=$(SKTRC) modules
+	$(MAKE) -C $(TREE) O=$(OUT) M=$(SKTRC) modules # ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE)
 
 clean: 
-	$(MAKE) -C $(TREE) O=$(OUT) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) M=$(SKTRC) clean
+	$(MAKE) -C $(TREE) O=$(OUT) M=$(SKTRC) clean # ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE)
   #+end_src
 
   Don't forget to change ~/FULL/PATH/TO/...~ at the first 3 lines to the actual full paths to (1) the ~src~ directory from this repo, (2) your Kernel source tree and (3) the build output directory, respectivly.
 
-  Also, if you're not building for a native architecture (i.e., the arch of your device where you doing builds), uncomment the ~ARCH~ and ~CROSS_COMPILE~ variables and set them with (1) the desired architecture and (2) the full path to your cross-compiler (and *do NOT forget the cross-compiler prefix at the end of the path WITH the ~-~ at the end!*)
+  Also, if you're not building for a native architecture (i.e., the arch of your device where you doing builds), uncomment the ~ARCH~ and ~CROSS_COMPILE~ variables and set them with (1) the desired architecture and (2) the full path to your cross-compiler (and *do NOT forget the cross-compiler prefix at the end of the path WITH a dash (-) at the end!*)
 
 2. Open the ~src/sktrc.c~, go to the the ~SKTRC_LOG~ pointer and edit the ~/FULL/PATH/TO/sktrc.log~ to the full path where you'd like to store your SKTRC log. This path should exist, otherwise, you wont be able to verify if SKTRC is properly working!
 

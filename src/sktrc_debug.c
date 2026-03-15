@@ -1,6 +1,6 @@
 /**
  * sktrc_debug.c - A module to help at Simple Kernel Trace's debugging
- * Copyright (C) 2025  Sidney PEPO <sidneypepo@disroot.org>
+ * Copyright (C) 2025-2026  Sidney PEPO <sidneypepo@disroot.org>
  *
  * This file is part of Simple Kernel Trace.
  *
@@ -35,8 +35,14 @@
 #include <linux/irqflags.h> // irqs_disabled
 #include <linux/gfp.h> // alloc flags
 #include <linux/kernel.h> // mini-libc (snprintf)
-#include <linux/mutex.h> // mutex
-#include <stdarg.h> // var args
+#include <linux/mutex.h>  // mutex
+
+#include <linux/version.h> // linux version
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+#include <linux/stdarg.h>
+#else
+#include <stdarg.h>
+#endif
 
 static void sktrc_debug(const char *str)
 {
