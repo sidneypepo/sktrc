@@ -1,6 +1,6 @@
 /**
  * sktrc_flush.c - A module to test Simple Kernel Trace and flush its data
- * Copyright (C) 2025  Sidney PEPO <sidneypepo@disroot.org>
+ * Copyright (C) 2025-2026  Sidney PEPO <sidneypepo@disroot.org>
  *
  * This file is part of Simple Kernel Trace.
  *

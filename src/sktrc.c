@@ -1,6 +1,6 @@
 /**
  * sktrc.c - Simple Kernel Trace's main file
- * Copyright (C) 2025  Sidney PEPO <sidneypepo@disroot.org>
+ * Copyright (C) 2025-2026  Sidney PEPO <sidneypepo@disroot.org>
  *
  * This file is part of Simple Kernel Trace.
  *
@@ -68,8 +68,14 @@ static const char SKTRC_CTX[0x10][0x100][0x2a] = {
 #include <linux/irqflags.h> // irqs_disabled
 #include <linux/gfp.h> // alloc flags
 #include <linux/kernel.h> // mini-libc (snprintf)
-#include <linux/mutex.h> // mutex
-#include <stdarg.h> // var args
+#include <linux/mutex.h>  // mutex
+
+#include <linux/version.h> // linux version
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+#include <linux/stdarg.h>
+#else
+#include <stdarg.h>
+#endif
 
 static const char *const SKTRC_EOPEN = "fail to open ";
 static const char *const SKTRC_EALLOC = "fail to alloc memory";
@@ -87,11 +93,20 @@ static void sktrc_file_write(char *const ctx, const char *const msg,
 	if (!IS_ERR_OR_NULL(log_filp)) {
 		if (flush != NULL) {
 			kernel_write(log_filp, flush, strlen(flush),
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+				     (loff_t *)log_filp->f_pos);
+#else
 				     log_filp->f_pos);
+#endif
 			kfree(flush);
 			flush = NULL;
 		}
-		kernel_write(log_filp, msg, strlen(msg), log_filp->f_pos);
+		kernel_write(log_filp, msg, strlen(msg),
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			     (loff_t *)log_filp->f_pos);
+#else
+			     log_filp->f_pos);
+#endif
 		filp_close(log_filp, NULL);
 		return;
 	}
